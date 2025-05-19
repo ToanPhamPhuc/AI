@@ -3,13 +3,13 @@ import random
 import sys
 
 # --- Constants ---
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1366, 768
 BOX_SIZE = 20
 START_X = WIDTH // 2 // BOX_SIZE * BOX_SIZE
 START_Y = HEIGHT // 2 // BOX_SIZE * BOX_SIZE
 MOVE_FRAMES = 5
 PLAYER_MOVE_FRAMES = 5
-AI_MOVE_FRAMES = 2
+AI_MOVE_FRAMES = 1
 
 # --- Player control variables ---
 player_mode = False
