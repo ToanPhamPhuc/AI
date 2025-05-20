@@ -88,19 +88,24 @@ while True:
                     continue
 
                 # Check self collision -> split snake
-                if new_head in snake:
+                if new_head in snake: #TODO: Player's snake child not splitting
+                    print(f"Collision detected for {snake_names[i]} at {new_head}") 
                     index = snake.index(new_head)
-                    new_snake = snake[index:]
+                    tail_part = snake[index:]
                     snakes[i] = snake[:index]
 
-                    if len(new_snake) > 1:
-                        new_agent = SimpleAIAgent(x=new_snake[0][0], y=new_snake[0][1])
+                    # If valid tail to split, spawn helper snake
+                    if len(tail_part) > 1:
+                        new_agent = SimpleAIAgent(x=tail_part[0][0], y=tail_part[0][1])
                         new_agent.direction = agent.direction
                         agents.append(new_agent)
-                        snakes.append(new_snake)
+                        snakes.append(tail_part)
                         scores.append(0)
                         snake_names.append(f"Snake{len(snake_names)}")
                         snake_colors.append(random_color())
+                    else:
+                        # If too short, remove current snake (it dies)
+                        snakes[i] = []
                     continue
 
                 snake.insert(0, new_head)
@@ -139,6 +144,15 @@ while True:
 
         pygame.display.flip()
         clock.tick(30)
+
+        # --- Remove empty snakes and related data ---
+        for i in reversed(range(len(snakes))):
+            if not snakes[i]:
+                del snakes[i]
+                del agents[i]
+                del snake_colors[i]
+                del snake_names[i]
+                del scores[i]
 
         if frames_left > 0:
             frames_left -= 1
