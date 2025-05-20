@@ -37,7 +37,15 @@ while True:
     snakes = [[(START_X, START_Y)]]
     scores = [0]
 
-    food = random_food([pos for sn in snakes for pos in sn])
+    foods = []
+    snake_positions = [pos for sn in snakes for pos in sn]
+    # Ensure only one food per snake color
+    existing_colors = {f[2] for f in foods}
+    for color in snake_colors:
+        if color not in existing_colors:
+            snake_positions = [pos for sn in snakes for pos in sn]
+            foods.append(random_food(snake_positions, color))
+
 
     running = True
     frames_left = 0
@@ -63,7 +71,11 @@ while True:
 
         screen.fill(BACKGROUND_COLOR)
 
+        snake_positions = [pos for sn in snakes for pos in sn]
+
         for i in range(len(agents)):
+            food_color = snake_colors[i]
+            # foods.append(random_food(snake_positions, food_color))
             agent = agents[i]
             snake = snakes[i]
 
@@ -78,42 +90,80 @@ while True:
                     }[player_direction]
                     new_head = (snake[0][0] + dx * BOX_SIZE, snake[0][1] + dy * BOX_SIZE)
                 else:
-                    action, new_head = agent.move(snake, food)
+                    # Get food that matches this snake's color
+                    target_foods = [f for f in foods if f[2] == snake_colors[i]]
+                    target_food = target_foods[0] if target_foods else None
+                    action, new_head = agent.move(snake, target_food)
 
                 # Check collision with walls
                 if (
                     new_head[0] < 0 or new_head[0] >= WIDTH or
                     new_head[1] < 0 or new_head[1] >= HEIGHT
                 ):
+                    if i == 0:
+                        print("Player hit the wall and died.")
+                        player_mode = False
+                    snakes[i] = []
                     continue
 
+
                 # Check self collision -> split snake
-                if new_head in snake: #TODO: Player's snake child not splitting
+                if new_head in snake:
                     print(f"Collision detected for {snake_names[i]} at {new_head}") 
                     index = snake.index(new_head)
-                    tail_part = snake[index:]
-                    snakes[i] = snake[:index]
+                    
+                    if i == 0:  # Player splits
+                        tail_part = snake[index:]
+                        snakes[i] = snake[:index]
 
-                    # If valid tail to split, spawn helper snake
-                    if len(tail_part) > 1:
-                        new_agent = SimpleAIAgent(x=tail_part[0][0], y=tail_part[0][1])
-                        new_agent.direction = agent.direction
-                        agents.append(new_agent)
-                        snakes.append(tail_part)
-                        scores.append(0)
-                        snake_names.append(f"Snake{len(snake_names)}")
-                        snake_colors.append(random_color())
+                        if len(tail_part) > 1:
+                            new_agent = SimpleAIAgent(x=tail_part[0][0], y=tail_part[0][1])
+                            new_agent.direction = agent.direction or 'right'
+                            agents.append(new_agent)
+                            snakes.append(tail_part)
+                            scores.append(0)
+
+                            new_color = random_color()
+                            snake_colors.append(new_color)
+                            snake_names.append(f"Snake{len(snake_names)}")
+
+                            # Ensure the new snake has food to pursue
+                            snake_positions = [pos for sn in snakes for pos in sn]
+                            foods.append(random_food(snake_positions, new_color))
+                        else:
+                            print("Player died.")
+                            player_mode = False
+                            snakes[i] = []
                     else:
-                        # If too short, remove current snake (it dies)
+                        # AI just dies
+                        print(f"{snake_names[i]} died from self-collision.")
                         snakes[i] = []
+
                     continue
 
                 snake.insert(0, new_head)
-                if new_head == food:
-                    scores[i] += 1
-                    food = random_food([pos for sn in snakes for pos in sn])
-                else:
+                eaten = False
+                for j, (fx, fy, fcolor) in enumerate(foods):
+                    if (fx, fy) == new_head:
+                        if fcolor == snake_colors[i]:
+                            # Legal food
+                            scores[i] += 1
+                            eaten = True
+                            del foods[j]
+                            foods.append(random_food(
+                                [pos for sn in snakes for pos in sn], snake_colors[i]
+                            ))
+                        else:
+                            # This is another snake's food → treat it as fatal
+                            if i == 0:
+                                print("Player tried to eat someone else's food and died.")
+                                player_mode = False
+                            snakes[i] = []
+                        break
+
+                if not eaten:
                     snake.pop()
+
 
                 agent.x, agent.y = new_head
 
@@ -140,7 +190,9 @@ while True:
 
 
         # Draw food
-        pygame.draw.rect(screen, FOOD_COLOR, (*food, BOX_SIZE, BOX_SIZE))
+        for fx, fy, color in foods:
+            pygame.draw.rect(screen, color, (fx, fy, BOX_SIZE, BOX_SIZE))
+
 
         pygame.display.flip()
         clock.tick(30)

@@ -5,8 +5,8 @@ WIDTH, HEIGHT = 1024, 768
 BOX_SIZE = 20
 
 # --- Movement speeds (frames per move) ---
-MOVE_FRAMES = 5
-PLAYER_MOVE_FRAMES = 5
+MOVE_FRAMES = 1
+PLAYER_MOVE_FRAMES = 1
 AI_MOVE_FRAMES = 1
 
 # --- Colors ---
@@ -23,13 +23,13 @@ def random_color():
     """Generate a random bright color for snakes."""
     return (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
 
-def random_food(snake_positions):
-    """Generate food coordinates not overlapping with any snake."""
+def random_food(snake_positions, color):
+    """Generate food coordinates not overlapping with any snake, tagged with a color."""
     while True:
         fx = random.randrange(0, WIDTH, BOX_SIZE)
         fy = random.randrange(0, HEIGHT, BOX_SIZE)
         if (fx, fy) not in snake_positions:
-            return (fx, fy)
+            return (fx, fy, color)
 
 def distance(a, b):
     """Manhattan distance between points a and b."""

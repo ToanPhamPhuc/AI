@@ -11,11 +11,26 @@ class SimpleAIAgent:
 
     def move(self, snake, food):
         head_x, head_y = snake[0]
+
+        # Handle case when there's no food
+        if food is None:
+            dx, dy = {
+                'up': (0, -1),
+                'down': (0, 1),
+                'left': (-1, 0),
+                'right': (1, 0),
+            }[self.direction]
+            new_x = head_x + dx * BOX_SIZE
+            new_y = head_y + dy * BOX_SIZE
+            return self.direction, (new_x, new_y)
+
+
+        # Correct direction mapping
         directions = {
-            'left':  (-1,  0),
-            'right': ( 1,  0),
-            'up':    ( 0, -1),
-            'down':  ( 0,  1)
+            'up': (0, -1),
+            'down': (0, 1),
+            'left': (-1, 0),
+            'right': (1, 0)
         }
 
         best_move = None
@@ -24,9 +39,9 @@ class SimpleAIAgent:
         for dir, (dx, dy) in directions.items():
             # Prevent reversing
             if (self.direction == 'left' and dir == 'right') or \
-               (self.direction == 'right' and dir == 'left') or \
-               (self.direction == 'up' and dir == 'down') or \
-               (self.direction == 'down' and dir == 'up'):
+            (self.direction == 'right' and dir == 'left') or \
+            (self.direction == 'up' and dir == 'down') or \
+            (self.direction == 'down' and dir == 'up'):
                 continue
 
             new_x = head_x + dx * BOX_SIZE
@@ -53,7 +68,9 @@ class SimpleAIAgent:
                 self.direction = choice[0]
                 return choice
             else:
+                # Nowhere to go, stay in place
                 return self.direction, (head_x, head_y)
+
 
     def learn(self, reward):
         # Placeholder for learning logic
