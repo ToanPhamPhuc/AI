@@ -114,19 +114,25 @@ while True:
 
         # Draw snakes
         for j, snake in enumerate(snakes):
+            if not snake:
+                continue  # Skip empty snakes to avoid IndexError
+            
+            # Draw body
             for segment in snake[1:]:
-                pygame.draw.rect(screen, SNAKE_BODY_COLOR, (*segment, BOX_SIZE, BOX_SIZE))
+                pygame.draw.rect(screen, (0, 200, 255), (*segment, BOX_SIZE, BOX_SIZE))
 
-            head_color = PLAYER_COLOR if j == 0 else snake_colors[j]
+            # Draw head
+            head_color = (255, 255, 0) if j == 0 else snake_colors[j]
             pygame.draw.rect(screen, head_color, (*snake[0], BOX_SIZE, BOX_SIZE))
 
             # Draw name above head
             name_surf = font.render(snake_names[j], True, NAME_COLOR)
-            screen.blit(name_surf, (snake[0][0] + 2, snake[0][1] - name_surf.get_height() - 2))
+            screen.blit(name_surf, (snake[0][0], snake[0][1] - 20))
 
             # Draw score below head
-            score_surf = font.render(str(scores[j]), True, TEXT_COLOR)
+            score_surf = font.render(f"{scores[j]}", True, (255, 255, 255))
             screen.blit(score_surf, (snake[0][0], snake[0][1] + BOX_SIZE))
+
 
         # Draw food
         pygame.draw.rect(screen, FOOD_COLOR, (*food, BOX_SIZE, BOX_SIZE))
