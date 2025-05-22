@@ -24,7 +24,7 @@ START_X = WIDTH // 2 // BOX_SIZE * BOX_SIZE
 START_Y = HEIGHT // 2 // BOX_SIZE * BOX_SIZE
 
 def reset_game():
-    global player_mode, player_direction, pending_direction, snake_colors, snake_names, agents, snakes, scores, foods
+    global player_mode, player_direction, pending_direction, snake_colors, snake_names, agents, snakes, scores, foods, running
     player_mode = True
     player_direction = 'right'
     pending_direction = 'right'
@@ -37,7 +37,8 @@ def reset_game():
     # Initialize food for the player
     snake_positions = [pos for sn in snakes for pos in sn]
     foods.append(random_food(snake_positions, PLAYER_COLOR))
-    return True  # Return True to indicate game should continue running
+    running = False  # This will break the inner loop and restart from the main loop
+    return False  # Return False to break the current game loop
 
 # Initialize game variables
 player_mode = True
@@ -47,19 +48,23 @@ snake_colors = [PLAYER_COLOR]
 snake_names = [player_name]
 generation = 1
 
-while True:
-    agents = [SimpleAIAgent(x=START_X, y=START_Y)]
-    snakes = [[(START_X, START_Y)]]
-    scores = [0]
-
-    foods = []
-    snake_positions = [pos for sn in snakes for pos in sn]
-    # Ensure only one food per snake color
-    existing_colors = {f[2] for f in foods}
-    for color in snake_colors:
-        if color not in existing_colors:
-            snake_positions = [pos for sn in snakes for pos in sn]
-            foods.append(random_food(snake_positions, color))
+while True:  # Main game loop
+    # Initialize or reinitialize game state
+    if not 'agents' in locals() or not agents:  # If agents doesn't exist or is empty
+        agents = [SimpleAIAgent(x=START_X, y=START_Y)]
+    if not 'snakes' in locals() or not snakes:  # If snakes doesn't exist or is empty
+        snakes = [[(START_X, START_Y)]]
+    if not 'scores' in locals() or not scores:  # If scores doesn't exist or is empty
+        scores = [0]
+    if not 'foods' in locals() or not foods:  # If foods doesn't exist or is empty
+        foods = []
+        snake_positions = [pos for sn in snakes for pos in sn]
+        # Ensure only one food per snake color
+        existing_colors = {f[2] for f in foods}
+        for color in snake_colors:
+            if color not in existing_colors:
+                snake_positions = [pos for sn in snakes for pos in sn]
+                foods.append(random_food(snake_positions, color))
 
     running = True
     frames_left = 0
@@ -147,6 +152,11 @@ while True:
                             print(f"Control transferred to {snake_names[0]}")
                         else:
                             print("No more snakes to control, game restarted")
+                            # Clear all game objects before restart
+                            snakes.clear()
+                            agents.clear()
+                            foods.clear()
+                            scores.clear()
                             running = reset_game()  # Reset game state
                     snakes[i] = []
                     continue
@@ -194,6 +204,11 @@ while True:
                                 print(f"Control transferred to {snake_names[0]}")
                             else:
                                 print("No more snakes to control, game restarted")
+                                # Clear all game objects before restart
+                                snakes.clear()
+                                agents.clear()
+                                foods.clear()
+                                scores.clear()
                                 running = reset_game()  # Reset game state
                             snakes[i] = []
                     else:  # AI snake splits or dies
@@ -257,6 +272,11 @@ while True:
                                     print(f"Control transferred to {snake_names[0]}")
                                 else:
                                     print("No more snakes to control, game restarted")
+                                    # Clear all game objects before restart
+                                    snakes.clear()
+                                    agents.clear()
+                                    foods.clear()
+                                    scores.clear()
                                     running = reset_game()  # Reset game state
                             snakes[i] = []
                         break
@@ -268,9 +288,12 @@ while True:
 
         # Draw snakes
         for j, snake in enumerate(snakes):
-            if not snake:
-                continue  # Skip empty snakes to avoid IndexError
+            if not snake:  # Skip empty snakes
+                continue
             
+            if j >= len(snake_colors) or j >= len(snake_names) or j >= len(scores):  # Safety check
+                continue
+
             # Draw body
             for segment in snake[1:]:
                 pygame.draw.rect(screen, (0, 200, 255), (*segment, BOX_SIZE, BOX_SIZE))
@@ -297,11 +320,15 @@ while True:
         # --- Remove empty snakes and related data ---
         for i in reversed(range(len(snakes))):
             if not snakes[i]:
+                if i < len(agents):
+                    del agents[i]
+                if i < len(snake_colors):
+                    del snake_colors[i]
+                if i < len(snake_names):
+                    del snake_names[i]
+                if i < len(scores):
+                    del scores[i]
                 del snakes[i]
-                del agents[i]
-                del snake_colors[i]
-                del snake_names[i]
-                del scores[i]
 
         if frames_left > 0:
             frames_left -= 1
@@ -309,4 +336,4 @@ while True:
             frames_left = PLAYER_MOVE_FRAMES if player_mode else AI_MOVE_FRAMES
     
     generation += 1
-    print(f"Generation {generation} finished. Score: {scores[0]}")
+    #gprint(f"Generation {generation} finished. Score: {scores[0]}")
