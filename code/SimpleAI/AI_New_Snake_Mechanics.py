@@ -2,7 +2,7 @@ import pygame
 import tkinter as tk
 from tkinter import simpledialog
 import sys
-from SimpleAI import SimpleAIAgent
+from SimpleAI import *
 from config import *
 
 # --- Player Name Popup ---
@@ -135,9 +135,27 @@ while True:
                             player_mode = False
                             snakes[i] = []
                     else:
-                        # AI just dies
-                        print(f"{snake_names[i]} died from self-collision.")
-                        snakes[i] = []
+                        # AI splits like the player
+                        tail_part = snake[index:]
+                        snakes[i] = snake[:index]
+
+                        if len(tail_part) > 1:
+                            new_agent = SimpleAIAgent(x=tail_part[0][0], y=tail_part[0][1])
+                            new_agent.direction = agent.direction or 'right'
+                            agents.append(new_agent)
+                            snakes.append(tail_part)
+                            scores.append(0)
+
+                            new_color = random_color()
+                            snake_colors.append(new_color)
+                            snake_names.append(f"Snake{len(snake_names)}")
+
+                            # Ensure the new snake has food to pursue
+                            snake_positions = [pos for sn in snakes for pos in sn]
+                            foods.append(random_food(snake_positions, new_color))
+                        else:
+                            print(f"{snake_names[i]} died from self-collision.")
+                            snakes[i] = []
 
                     continue
 
