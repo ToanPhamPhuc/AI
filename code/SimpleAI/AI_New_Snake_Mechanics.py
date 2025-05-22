@@ -23,13 +23,28 @@ font = pygame.font.SysFont(None, 24)
 START_X = WIDTH // 2 // BOX_SIZE * BOX_SIZE
 START_Y = HEIGHT // 2 // BOX_SIZE * BOX_SIZE
 
-player_mode = False
+def reset_game():
+    global player_mode, player_direction, pending_direction, snake_colors, snake_names, agents, snakes, scores, foods
+    player_mode = True
+    player_direction = 'right'
+    pending_direction = 'right'
+    snake_colors = [PLAYER_COLOR]
+    snake_names = [player_name]
+    agents = [SimpleAIAgent(x=START_X, y=START_Y)]
+    snakes = [[(START_X, START_Y)]]
+    scores = [0]
+    foods = []
+    # Initialize food for the player
+    snake_positions = [pos for sn in snakes for pos in sn]
+    foods.append(random_food(snake_positions, PLAYER_COLOR))
+    return True  # Return True to indicate game should continue running
+
+# Initialize game variables
+player_mode = True
 player_direction = 'right'
 pending_direction = 'right'
-
 snake_colors = [PLAYER_COLOR]
 snake_names = [player_name]
-
 generation = 1
 
 while True:
@@ -46,7 +61,6 @@ while True:
             snake_positions = [pos for sn in snakes for pos in sn]
             foods.append(random_food(snake_positions, color))
 
-
     running = True
     frames_left = 0
 
@@ -58,7 +72,18 @@ while True:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     player_mode = not player_mode
+                    if player_mode:
+                        # When switching to player mode, inherit the AI's direction
+                        player_direction = agents[0].direction
+                        pending_direction = agents[0].direction
                     print("Switched to", "PLAYER mode" if player_mode else "AI mode")
+                elif event.key == pygame.K_g and player_mode:  # Cheat code for growth
+                    if len(snakes) > 0:  # Make sure there's a snake to grow
+                        # Add a new segment at the tail's position
+                        tail = snakes[0][-1]
+                        snakes[0].append(tail)
+                        scores[0] += 1  # Increase score as well
+                        print("Cheat activated: Snake grew longer!")
                 elif player_mode:
                     if (event.key == pygame.K_UP or event.key == pygame.K_w) and player_direction != 'down':
                         pending_direction = 'up'
@@ -74,8 +99,10 @@ while True:
         snake_positions = [pos for sn in snakes for pos in sn]
 
         for i in range(len(agents)):
+            if i >= len(snake_colors):  # Safety check
+                continue
+                
             food_color = snake_colors[i]
-            # foods.append(random_food(snake_positions, food_color))
             agent = agents[i]
             snake = snakes[i]
 
@@ -100,23 +127,40 @@ while True:
                     new_head[0] < 0 or new_head[0] >= WIDTH or
                     new_head[1] < 0 or new_head[1] >= HEIGHT
                 ):
-                    if i == 0:
+                    if i == 0:  # Player hits wall
                         print("Player hit the wall and died.")
-                        player_mode = False
+                        # Transfer player control to next available snake
+                        if len(snakes) > 1 and len(agents) > 1:  # Make sure we have both next snake and agent
+                            # Store the next snake's direction before deletion
+                            next_direction = agents[1].direction
+                            # Remove current snake
+                            del snakes[0]
+                            del agents[0]
+                            del snake_colors[0]
+                            del snake_names[0]
+                            del scores[0]
+                            # Make next snake the player snake
+                            snake_colors[0] = PLAYER_COLOR  # Change color to yellow
+                            player_direction = next_direction  # Use stored direction
+                            pending_direction = next_direction
+                            player_mode = True  # Keep player mode active
+                            print(f"Control transferred to {snake_names[0]}")
+                        else:
+                            print("No more snakes to control, game restarted")
+                            running = reset_game()  # Reset game state
                     snakes[i] = []
                     continue
-
 
                 # Check self collision -> split snake
                 if new_head in snake:
                     print(f"Collision detected for {snake_names[i]} at {new_head}") 
                     index = snake.index(new_head)
                     
-                    if i == 0:  # Player splits
+                    if i == 0:  # Player splits or dies
                         tail_part = snake[index:]
                         snakes[i] = snake[:index]
 
-                        if len(tail_part) > 1:
+                        if len(tail_part) > 1:  # Split possible
                             new_agent = SimpleAIAgent(x=tail_part[0][0], y=tail_part[0][1])
                             new_agent.direction = agent.direction or 'right'
                             agents.append(new_agent)
@@ -130,12 +174,29 @@ while True:
                             # Ensure the new snake has food to pursue
                             snake_positions = [pos for sn in snakes for pos in sn]
                             foods.append(random_food(snake_positions, new_color))
-                        else:
-                            print("Player died.")
-                            player_mode = False
+                        else:  # Player dies
+                            print("Player died from self-collision.")
+                            # Transfer player control to next available snake
+                            if len(snakes) > 1 and len(agents) > 1:  # Make sure we have both next snake and agent
+                                # Store the next snake's direction before deletion
+                                next_direction = agents[1].direction
+                                # Remove current snake
+                                del snakes[0]
+                                del agents[0]
+                                del snake_colors[0]
+                                del snake_names[0]
+                                del scores[0]
+                                # Make next snake the player snake
+                                snake_colors[0] = PLAYER_COLOR  # Change color to yellow
+                                player_direction = next_direction  # Use stored direction
+                                pending_direction = next_direction
+                                player_mode = True  # Keep player mode active
+                                print(f"Control transferred to {snake_names[0]}")
+                            else:
+                                print("No more snakes to control, game restarted")
+                                running = reset_game()  # Reset game state
                             snakes[i] = []
-                    else:
-                        # AI splits like the player
+                    else:  # AI snake splits or dies
                         tail_part = snake[index:]
                         snakes[i] = snake[:index]
 
@@ -163,25 +224,45 @@ while True:
                 eaten = False
                 for j, (fx, fy, fcolor) in enumerate(foods):
                     if (fx, fy) == new_head:
-                        if fcolor == snake_colors[i]:
+                        # Allow player-controlled snake to eat yellow food
+                        if (i == 0 and fcolor == PLAYER_COLOR) or (i > 0 and fcolor == snake_colors[i]):
                             # Legal food
                             scores[i] += 1
                             eaten = True
                             del foods[j]
+                            # Spawn new food with appropriate color
                             foods.append(random_food(
-                                [pos for sn in snakes for pos in sn], snake_colors[i]
+                                [pos for sn in snakes for pos in sn], 
+                                PLAYER_COLOR if i == 0 else snake_colors[i]
                             ))
                         else:
                             # This is another snake's food → treat it as fatal
                             if i == 0:
                                 print("Player tried to eat someone else's food and died.")
-                                player_mode = False
+                                # Transfer player control to next available snake
+                                if len(snakes) > 1 and len(agents) > 1:  # Make sure we have both next snake and agent
+                                    # Store the next snake's direction before deletion
+                                    next_direction = agents[1].direction
+                                    # Remove current snake
+                                    del snakes[0]
+                                    del agents[0]
+                                    del snake_colors[0]
+                                    del snake_names[0]
+                                    del scores[0]
+                                    # Make next snake the player snake
+                                    snake_colors[0] = PLAYER_COLOR  # Change color to yellow
+                                    player_direction = next_direction  # Use stored direction
+                                    pending_direction = next_direction
+                                    player_mode = True  # Keep player mode active
+                                    print(f"Control transferred to {snake_names[0]}")
+                                else:
+                                    print("No more snakes to control, game restarted")
+                                    running = reset_game()  # Reset game state
                             snakes[i] = []
                         break
 
                 if not eaten:
                     snake.pop()
-
 
                 agent.x, agent.y = new_head
 
@@ -206,11 +287,9 @@ while True:
             score_surf = font.render(f"{scores[j]}", True, (255, 255, 255))
             screen.blit(score_surf, (snake[0][0], snake[0][1] + BOX_SIZE))
 
-
         # Draw food
         for fx, fy, color in foods:
             pygame.draw.rect(screen, color, (fx, fy, BOX_SIZE, BOX_SIZE))
-
 
         pygame.display.flip()
         clock.tick(30)
