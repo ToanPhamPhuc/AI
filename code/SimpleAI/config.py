@@ -1,7 +1,7 @@
 import random
 
 # --- Window and grid settings ---
-WIDTH, HEIGHT = 1024, 768
+WIDTH, HEIGHT = 768, 768
 BOX_SIZE = 20
 
 # --- Movement speeds (frames per move) ---
