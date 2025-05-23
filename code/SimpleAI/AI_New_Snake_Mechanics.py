@@ -5,6 +5,7 @@ import sys
 from SimpleAI import *
 from config import *
 
+#region Variable declaration 
 # --- Player Name Popup ---
 root = tk.Tk()
 root.withdraw()
@@ -23,6 +24,15 @@ font = pygame.font.SysFont(None, 24)
 START_X = WIDTH // 2 // BOX_SIZE * BOX_SIZE
 START_Y = HEIGHT // 2 // BOX_SIZE * BOX_SIZE
 
+# Initialize game variables
+player_mode = True
+player_direction = 'right'
+pending_direction = 'right'
+snake_colors = [PLAYER_COLOR]
+snake_names = [player_name]
+generation = 1
+#endregion
+
 def reset_game():
     global player_mode, player_direction, pending_direction, snake_colors, snake_names, agents, snakes, scores, foods, running
     player_mode = True
@@ -39,14 +49,6 @@ def reset_game():
     foods.append(random_food(snake_positions, PLAYER_COLOR))
     running = False  # This will break the inner loop and restart from the main loop
     return False  # Return False to break the current game loop
-
-# Initialize game variables
-player_mode = True
-player_direction = 'right'
-pending_direction = 'right'
-snake_colors = [PLAYER_COLOR]
-snake_names = [player_name]
-generation = 1
 
 while True:  # Main game loop
     # Initialize or reinitialize game state
@@ -165,7 +167,7 @@ while True:  # Main game loop
                 if new_head in snake:
                     print(f"Collision detected for {snake_names[i]} at {new_head}") 
                     index = snake.index(new_head)
-                    
+                    #region Player splitting logic 
                     if i == 0:  # Player splits or dies
                         tail_part = snake[index:]
                         snakes[i] = snake[:index]
@@ -185,7 +187,7 @@ while True:  # Main game loop
                             snake_positions = [pos for sn in snakes for pos in sn]
                             foods.append(random_food(snake_positions, new_color))
                         else:  # Player dies
-                            print("Player died from self-collision.")
+                            print("Tail too short to split, Player died from self-collision.")
                             # Transfer player control to next available snake
                             if len(snakes) > 1 and len(agents) > 1:  # Make sure we have both next snake and agent
                                 # Store the next snake's direction before deletion
@@ -201,7 +203,7 @@ while True:  # Main game loop
                                 player_direction = next_direction  # Use stored direction
                                 pending_direction = next_direction
                                 player_mode = True  # Keep player mode active
-                                print(f"Control transferred to {snake_names[0]}")
+                                print(f"Player Controller transferred to {snake_names[0]}")
                             else:
                                 print("No more snakes to control, game restarted")
                                 # Clear all game objects before restart
@@ -211,6 +213,9 @@ while True:  # Main game loop
                                 scores.clear()
                                 running = reset_game()  # Reset game state
                             snakes[i] = []
+                    #endregion
+
+                    #region AI splitting logic
                     else:  # AI snake splits or dies
                         tail_part = snake[index:]
                         snakes[i] = snake[:index]
@@ -232,7 +237,7 @@ while True:  # Main game loop
                         else:
                             print(f"{snake_names[i]} died from self-collision.")
                             snakes[i] = []
-
+                    #endregion
                     continue
 
                 snake.insert(0, new_head)
@@ -336,4 +341,4 @@ while True:  # Main game loop
             frames_left = PLAYER_MOVE_FRAMES if player_mode else AI_MOVE_FRAMES
     
     generation += 1
-    #gprint(f"Generation {generation} finished. Score: {scores[0]}")
+    #print(f"Generation {generation} finished. Score: {scores[0]}")
